@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rifa Handebol - Embrasada</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        .font-roboto { font-family: 'Roboto', sans-serif; }
+        
+        /* Loading animation */
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #f97316;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Number button styles */
+        .number-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .number-btn:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .number-available {
+            background-color: rgb(55 65 81);
+            color: rgb(209 213 219);
+        }
+        
+        .number-available:hover {
+            background-color: rgb(75 85 99);
+        }
+        
+        .number-reserved {
+            background-color: rgb(234 179 8);
+            color: rgb(0 0 0);
+            box-shadow: 0 4px 6px -1px rgba(234, 179, 8, 0.5);
+        }
+        
+        .number-reserved:hover {
+            background-color: rgb(250 204 21);
+        }
+        
+        .number-sold {
+            background-color: rgb(185 28 28);
+            color: rgb(255 255 255);
+            box-shadow: 0 4px 6px -1px rgba(185, 28, 28, 0.5);
+        }
+        
+        .number-sold:hover {
+            background-color: rgb(220 38 38);
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .modal-overlay.show {
+            opacity: 1;
+        }
+        
+        .modal-content {
+            background-color: rgb(31 41 55);
+            border: 1px solid rgb(55 65 81);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 24rem;
+            margin: 0 auto;
+            padding: 1.5rem;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Hide elements */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Grid responsive */
+        .numbers-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 0.5rem;
+        }
+        
+        @media (min-width: 640px) {
+            .numbers-grid {
+                grid-template-columns: repeat(14, 1fr);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-xl font-light">Carregando Rifa Embrasada...</p>
+        </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="hidden text-red-400 text-center p-4 bg-gray-900 min-h-screen">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <h2 class="text-2xl font-bold mb-4">Erro</h2>
+                <p id="error-message" class="text-lg"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="main-app" class="hidden bg-gradient-to-br from-gray-900 via-red-900 to-black min-h-screen font-roboto p-4 sm:p-6 lg:p-8 text-white">
+        <div class="max-w-5xl mx-auto">
+            <!-- Header -->
+            <header class="text-center mb-6">
+                <h1 class="font-bebas text-6xl md:text-7xl font-bold text-orange-400 tracking-wider">Rifa Handebol</h1>
+                <p class="text-gray-300">Atlética Embrasada</p>
+                <div class="mt-6 bg-gray-800 bg-opacity-40 border-l-4 border-orange-500 text-gray-200 p-4 rounded-md text-left max-w-2xl mx-auto shadow-lg">
+                    <p class="font-bold mb-2 text-orange-400">Instruções:</p>
+                    <ol class="list-decimal list-inside space-y-2 text-gray-300">
+                        <li>Selecione o número desejado;</li>
+                        <li>Coloque seu nome e número para contato;</li>
+                        <li>Marque o número como reservado;</li>
+                        <li>
+                            Realize o pagamento na chave Pix: <strong class="text-orange-400">75982480821</strong> (Maria Eduarda Fernandes de Almeida);
+                            <ul class="list-disc list-inside pl-5 pt-1">
+                                <li>Cada bilhete custa R$5,00;</li>
+                            </ul>
+                        </li>
+                        <li>Envie o comprovante para esse mesmo número;</li>
+                        <li>Selecione seu número novamente e marque como vendido;</li>
+                    </ol>
+                    <ul class="list-disc list-inside space-y-2 text-gray-300 mt-3">
+                        <li>O sorteio será realizado no dia 20 de agosto no nosso Instagram <strong class="text-orange-400">@atleticamedicinaunef</strong>;</li>
+                        <li>O prêmio é R$100,00 no Pix do vencedor;</li>
+                        <li>Caso deseje desistir de algum número, entre em contato com a atlética para que possamos liberar o número.</li>
+                    </ul>
+                </div>
+            </header>
+
+            <!-- Statistics -->
+            <div class="mb-6 p-4 bg-gray-900 bg-opacity-60 rounded-xl shadow-lg">
+                <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-red-700"></div>
+                        <span class="text-gray-300">Vendido (<span id="sold-count">0</span>)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+                        <span class="text-gray-300">Reservado (<span id="reserved-count">0</span>)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full bg-gray-700"></div>
+                        <span class="text-gray-300">Disponível (<span id="available-count">140</span>)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Numbers Grid -->
+            <main class="numbers-grid p-4 bg-gray-900 bg-opacity-50 rounded-xl shadow-2xl" id="numbers-grid">
+                <!-- Numbers will be generated dynamically -->
+            </main>
+
+            <!-- Footer -->
+            <footer class="text-center mt-8 text-gray-500 text-sm">
+                <p>ID da Rifa: <span id="raffle-id">rifa-embrasada-2025-handebol</span></p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Number Modal -->
+    <div id="number-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-orange-400">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            
+            <div class="text-center mb-6">
+                <span id="modal-number-display" class="font-bebas inline-block w-20 h-20 leading-[5rem] text-center text-4xl rounded-full number-available">
+                    1
+                </span>
+                <h2 id="modal-number-title" class="font-bebas text-4xl text-orange-400 mt-4">Número 1</h2>
+            </div>
+            
+            <div id="modal-error" class="hidden text-red-400 text-center text-sm mb-4"></div>
+            
+            <!-- Available Number Form -->
+            <div id="available-form" class="space-y-4">
+                <div>
+                    <label for="participant-name" class="block text-sm font-medium text-gray-400 mb-1">Nome do Participante</label>
+                    <input 
+                        type="text" 
+                        id="participant-name" 
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" 
+                        placeholder="Nome completo (obrigatório)" 
+                    />
+                </div>
+                <div>
+                    <label for="participant-phone" class="block text-sm font-medium text-gray-400 mb-1">Telefone</label>
+                    <input 
+                        type="text" 
+                        id="participant-phone" 
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" 
+                        placeholder="11 dígitos (DDD + número)" 
+                    />
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button 
+                        id="reserve-btn" 
+                        class="w-full bg-yellow-500 text-black py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors"
+                    >
+                        Reservar
+                    </button>
+                    <button 
+                        id="sell-btn" 
+                        class="w-full bg-red-700 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                    >
+                        Marcar como Vendido
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reserved Number Info -->
+            <div id="reserved-info" class="hidden text-center space-y-4">
+                <div class="bg-gray-900 bg-opacity-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-400">Nome:</p>
+                    <p id="reserved-name" class="font-bold text-lg text-white"></p>
+                    <p class="text-sm text-gray-400 mt-2">Telefone:</p>
+                    <p id="reserved-phone" class="font-semibold text-gray-200"></p>
+                </div>
+                <div class="flex flex-col gap-3 pt-2">
+                    <button 
+                        id="generate-reminder-btn" 
+                        class="w-full flex justify-center items-center gap-2 bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.582a.5.5 0 0 1 0 .962L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                        </svg>
+                        Gerar Lembrete
+                    </button>
+                    <button 
+                        id="mark-sold-btn" 
+                        class="w-full bg-red-700 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
+                    >
+                        Marcar como Vendido
+                    </button>
+                    <button 
+                        id="clear-number-btn" 
+                        class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-500"
+                    >
+                        Liberar Número
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sold Number Info -->
+            <div id="sold-info" class="hidden text-center space-y-4">
+                <div class="bg-gray-900 bg-opacity-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-400">Nome:</p>
+                    <p id="sold-name" class="font-bold text-lg text-white"></p>
+                    <p class="text-sm text-gray-400 mt-2">Telefone:</p>
+                    <p id="sold-phone" class="font-semibold text-gray-200"></p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button 
+                        id="clear-sold-btn" 
+                        class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-500"
+                    >
+                        Liberar Número
+                    </button>
+                    <button 
+                        id="close-sold-btn" 
+                        class="w-full bg-gray-700 text-white py-3 rounded-lg font-semibold hover:bg-gray-600"
+                    >
+                        Fechar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Password Prompt -->
+            <div id="password-prompt" class="hidden space-y-4">
+                <div>
+                    <label for="admin-password" class="block text-sm font-medium text-gray-400 mb-1">Senha Administrativa</label>
+                    <input 
+                        type="password" 
+                        id="admin-password" 
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                        placeholder="Digite a senha para confirmar" 
+                    />
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button 
+                        id="confirm-clear-btn" 
+                        class="w-full bg-red-700 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
+                    >
+                        Confirmar Liberação
+                    </button>
+                    <button 
+                        id="cancel-clear-btn" 
+                        class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-500"
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generated Text Modal -->
+    <div id="generated-text-modal" class="modal-overlay hidden" style="z-index: 60;">
+        <div class="modal-content max-w-lg">
+            <h2 id="generation-title" class="font-bebas text-3xl text-orange-400 mb-4">Lembrete de Pagamento</h2>
+            <div class="bg-gray-900 p-4 rounded-lg min-h-[150px] whitespace-pre-wrap text-gray-300" id="generated-text-content">
+                <div id="generation-loading" class="flex justify-center items-center h-full">
+                    <div class="loading-spinner"></div>
+                </div>
+                <p id="generated-text" class="hidden"></p>
+            </div>
+            <div class="flex justify-end gap-3 mt-4">
+                <button 
+                    id="copy-text-btn" 
+                    class="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:bg-orange-800"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                    <span id="copy-text-label">Copiar</span>
+                </button>
+                <button 
+                    id="close-generated-text-btn" 
+                    class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500"
+                >
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === CONFIGURAÇÃO FIREBASE ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyAaq6Axgk7LGZlO0j_WWLoG6QRUIetj9dk",
+            authDomain: "rifa-handebol-embrasada.firebaseapp.com",
+            projectId: "rifa-handebol-embrasada",
+            storageBucket: "rifa-handebol-embrasada.firebasestorage.app",
+            messagingSenderId: "184640580884",
+            appId: "1:184640580884:web:f91ca340d06e46cf82a601"
+        };
+
+        // Inicializar Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = app.firestore();
+        const auth = app.auth();
+
+        // === ESTADO DA APLICAÇÃO ===
+        const AppState = {
+            isAuthReady: false,
+            numbers: [],
+            selectedNumber: null,
+            isLoading: true,
+            error: "",
+            raffleId: "rifa-embrasada-2025-handebol",
+            
+            // Modal state
+            isModalOpen: false,
+            participantName: "",
+            participantPhone: "",
+            modalError: "",
+            isPasswordPromptVisible: false,
+            adminPassword: "",
+            
+            // Gemini API state
+            isGenerating: false,
+            generatedText: "",
+            isGeneratedTextModalOpen: false,
+            generationTitle: "",
+            
+            // Firestore listener
+            unsubscribeFirestore: null
+        };
+
+        // === ELEMENTOS DO DOM ===
+        const Elements = {
+            loadingScreen: document.getElementById('loading-screen'),
+            errorScreen: document.getElementById('error-screen'),
+            errorMessage: document.getElementById('error-message'),
+            mainApp: document.getElementById('main-app'),
+            numbersGrid: document.getElementById('numbers-grid'),
+            soldCount: document.getElementById('sold-count'),
+            reservedCount: document.getElementById('reserved-count'),
+            availableCount: document.getElementById('available-count'),
+            raffleIdSpan: document.getElementById('raffle-id'),
+            
+            // Modal elements
+            numberModal: document.getElementById('number-modal'),
+            closeModal: document.getElementById('close-modal'),
+            modalNumberDisplay: document.getElementById('modal-number-display'),
+            modalNumberTitle: document.getElementById('modal-number-title'),
+            modalError: document.getElementById('modal-error'),
+            
+            // Forms
+            availableForm: document.getElementById('available-form'),
+            reservedInfo: document.getElementById('reserved-info'),
+            soldInfo: document.getElementById('sold-info'),
+            passwordPrompt: document.getElementById('password-prompt'),
+            
+            // Form inputs
+            participantName: document.getElementById('participant-name'),
+            participantPhone: document.getElementById('participant-phone'),
+            adminPassword: document.getElementById('admin-password'),
+            
+            // Buttons
+            reserveBtn: document.getElementById('reserve-btn'),
+            sellBtn: document.getElementById('sell-btn'),
+            generateReminderBtn: document.getElementById('generate-reminder-btn'),
+            markSoldBtn: document.getElementById('mark-sold-btn'),
+            clearNumberBtn: document.getElementById('clear-number-btn'),
+            clearSoldBtn: document.getElementById('clear-sold-btn'),
+            closeSoldBtn: document.getElementById('close-sold-btn'),
+            confirmClearBtn: document.getElementById('confirm-clear-btn'),
+            cancelClearBtn: document.getElementById('cancel-clear-btn'),
+            
+            // Generated text modal
+            generatedTextModal: document.getElementById('generated-text-modal'),
+            generationTitle: document.getElementById('generation-title'),
+            generatedTextContent: document.getElementById('generated-text-content'),
+            generationLoading: document.getElementById('generation-loading'),
+            generatedText: document.getElementById('generated-text'),
+            copyTextBtn: document.getElementById('copy-text-btn'),
+            copyTextLabel: document.getElementById('copy-text-label'),
+            closeGeneratedTextBtn: document.getElementById('close-generated-text-btn'),
+            
+            // Info displays
+            reservedName: document.getElementById('reserved-name'),
+            reservedPhone: document.getElementById('reserved-phone'),
+            soldName: document.getElementById('sold-name'),
+            soldPhone: document.getElementById('sold-phone')
+        };
+
+        // === UTILITÁRIOS ===
+        function getRaffleId() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const idFromUrl = urlParams.get("id");
+                if (idFromUrl) {
+                    return idFromUrl;
+                }
+            } catch (e) {
+                console.error("Could not read URL params, falling back to a default ID.", e);
+            }
+            return "rifa-embrasada-2025-handebol";
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                console.log("Text copied to clipboard");
+                Elements.copyTextLabel.textContent = "Copiado!";
+                setTimeout(() => {
+                    Elements.copyTextLabel.textContent = "Copiar";
+                }, 2000);
+            }).catch(err => {
+                console.error("Failed to copy text: ", err);
+            });
+        }
+
+        function showError(message) {
+            AppState.error = message;
+            Elements.errorMessage.textContent = message;
+            Elements.loadingScreen.classList.add('hidden');
+            Elements.mainApp.classList.add('hidden');
+            Elements.errorScreen.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            AppState.isLoading = false;
+            Elements.loadingScreen.classList.add('hidden');
+            Elements.mainApp.classList.remove('hidden');
+        }
+
+        function getNumberClass(status) {
+            switch (status) {
+                case "sold": return "number-sold";
+                case "reserved": return "number-reserved";
+                default: return "number-available";
+            }
+        }
+
+        // === RENDERIZAÇÃO ===
+        function renderNumbers() {
+            Elements.numbersGrid.innerHTML = '';
+            
+            AppState.numbers.forEach(number => {
+                const button = document.createElement('button');
+                button.className = `font-bebas w-full aspect-square flex items-center justify-center text-xl sm:text-2xl rounded-lg number-btn ${getNumberClass(number.status)}`;
+                button.textContent = number.id;
+                button.addEventListener('click', () => handleNumberClick(number));
+                Elements.numbersGrid.appendChild(button);
+            });
+        }
+
+        function updateStats() {
+            const stats = AppState.numbers.reduce((acc, number) => {
+                acc[number.status] = (acc[number.status] || 0) + 1;
+                return acc;
+            }, { sold: 0, reserved: 0, available: 0 });
+            
+            stats.available = 140 - (stats.sold + stats.reserved);
+            
+            Elements.soldCount.textContent = stats.sold;
+            Elements.reservedCount.textContent = stats.reserved;
+            Elements.availableCount.textContent = stats.available;
+        }
+
+        function showModal() {
+            AppState.isModalOpen = true;
+            Elements.numberModal.classList.remove('hidden');
+            setTimeout(() => {
+                Elements.numberModal.classList.add('show');
+            }, 10);
+        }
+
+        function hideModal() {
+            AppState.isModalOpen = false;
+            Elements.numberModal.classList.remove('show');
+            setTimeout(() => {
+                Elements.numberModal.classList.add('hidden');
+                resetModalState();
+            }, 300);
+        }
+
+        function resetModalState() {
+            AppState.selectedNumber = null;
+            AppState.participantName = "";
+            AppState.participantPhone = "";
+            AppState.modalError = "";
+            AppState.isPasswordPromptVisible = false;
+            AppState.adminPassword = "";
+            
+            Elements.participantName.value = "";
+            Elements.participantPhone.value = "";
+            Elements.adminPassword.value = "";
+            Elements.modalError.classList.add('hidden');
+            
+            // Hide all forms
+            Elements.availableForm.classList.add('hidden');
+            Elements.reservedInfo.classList.add('hidden');
+            Elements.soldInfo.classList.add('hidden');
+            Elements.passwordPrompt.classList.add('hidden');
+        }
+
+        function showModalError(message) {
+            AppState.modalError = message;
+            Elements.modalError.textContent = message;
+            Elements.modalError.classList.remove('hidden');
+        }
+
+        function hideModalError() {
+            AppState.modalError = "";
+            Elements.modalError.classList.add('hidden');
+        }
+
+        function updateModalDisplay() {
+            if (!AppState.selectedNumber) return;
+            
+            const number = AppState.selectedNumber;
+            Elements.modalNumberDisplay.textContent = number.id;
+            Elements.modalNumberDisplay.className = `font-bebas inline-block w-20 h-20 leading-[5rem] text-center text-4xl rounded-full ${getNumberClass(number.status)}`;
+            Elements.modalNumberTitle.textContent = `Número ${number.id}`;
+            
+            // Hide all forms first
+            Elements.availableForm.classList.add('hidden');
+            Elements.reservedInfo.classList.add('hidden');
+            Elements.soldInfo.classList.add('hidden');
+            Elements.passwordPrompt.classList.add('hidden');
+            
+            if (AppState.isPasswordPromptVisible) {
+                Elements.passwordPrompt.classList.remove('hidden');
+            } else {
+                switch (number.status) {
+                    case "available":
+                        Elements.availableForm.classList.remove('hidden');
+                        Elements.participantName.value = AppState.participantName;
+                        Elements.participantPhone.value = AppState.participantPhone;
+                        break;
+                    case "reserved":
+                        Elements.reservedInfo.classList.remove('hidden');
+                        Elements.reservedName.textContent = number.owner;
+                        Elements.reservedPhone.textContent = number.phone;
+                        break;
+                    case "sold":
+                        Elements.soldInfo.classList.remove('hidden');
+                        Elements.soldName.textContent = number.owner;
+                        Elements.soldPhone.textContent = number.phone;
+                        break;
+                }
+            }
+        }
+
+        // === FIREBASE FUNCTIONS ===
+        async function initializeRaffle(raffleRef) {
+            console.log("initializeRaffle: Initializing raffle data");
+            const initialNumbers = Array.from({ length: 140 }, (_, i) => ({ 
+                id: i + 1, 
+                status: "available", 
+                owner: "", 
+                phone: "" 
+            }));
+            await raffleRef.set({ numbers: initialNumbers });
+            AppState.numbers = initialNumbers;
+            console.log("initializeRaffle: Raffle data initialized");
+        }
+
+        function setupFirestoreListener() {
+            if (!AppState.isAuthReady || !AppState.raffleId) {
+                console.log("setupFirestoreListener: Skipping, auth not ready or no raffleId");
+                return;
+            }
+
+            console.log("setupFirestoreListener: Setting up listener");
+            const raffleDocRef = db.collection("rifas").doc(AppState.raffleId);
+            
+            AppState.unsubscribeFirestore = raffleDocRef.onSnapshot(async (docSnap) => {
+                console.log("onSnapshot: Received document snapshot");
+                if (docSnap.exists && docSnap.data().numbers && docSnap.data().numbers.length === 140) {
+                    console.log("onSnapshot: Document exists and has 140 numbers");
+                    AppState.numbers = docSnap.data().numbers;
+                } else {
+                    console.log("onSnapshot: Document does not exist or numbers array is not 140, initializing raffle");
+                    await initializeRaffle(raffleDocRef);
+                }
+                
+                renderNumbers();
+                updateStats();
+                hideLoading();
+                console.log("onSnapshot: Data updated and rendered");
+            }, (err) => {
+                console.error("Firestore Snapshot Error:", err);
+                showError("Não foi possível carregar os dados da rifa. Verifique as regras de segurança do Firestore.");
+            });
+        }
+
+        async function updateFirestore(updatedNumbers) {
+            const raffleDocRef = db.collection("rifas").doc(AppState.raffleId);
+            try {
+                await raffleDocRef.set({ numbers: updatedNumbers });
+                return true;
+            } catch (e) {
+                console.error("Error updating document: ", e);
+                return false;
+            }
+        }
+
+        // === EVENT HANDLERS ===
+        function handleNumberClick(number) {
+            AppState.selectedNumber = number;
+            AppState.participantName = number.owner || "";
+            AppState.participantPhone = number.phone || "";
+            AppState.isPasswordPromptVisible = false;
+            hideModalError();
+            updateModalDisplay();
+            showModal();
+        }
+
+        async function handleSave(status) {
+            const name = Elements.participantName.value.trim();
+            const phone = Elements.participantPhone.value.trim();
+            const justDigits = phone.replace(/\D/g, "");
+            
+            if (!name || !phone) {
+                showModalError("Por favor, preencha o nome e o telefone.");
+                return;
+            }
+            
+            if (justDigits.length !== 11) {
+                showModalError("O telefone deve ter 11 dígitos (DDD + número).");
+                return;
+            }
+            
+            if (!AppState.selectedNumber) return;
+
+            const updatedNumbers = AppState.numbers.map(n =>
+                n.id === AppState.selectedNumber.id ? 
+                { ...n, status, owner: name, phone: phone } : n
+            );
+            
+            const success = await updateFirestore(updatedNumbers);
+            if (success) {
+                hideModal();
+            } else {
+                showModalError("Ocorreu um erro ao salvar. Tente novamente.");
+            }
+        }
+
+        async function handleMarkAsSold() {
+            if (!AppState.selectedNumber) return;
+            
+            const updatedNumbers = AppState.numbers.map(n => 
+                n.id === AppState.selectedNumber.id ? 
+                { ...n, status: "sold" } : n
+            );
+            
+            const success = await updateFirestore(updatedNumbers);
+            if (success) {
+                hideModal();
+            } else {
+                showModalError("Ocorreu um erro ao marcar como vendido.");
+            }
+        }
+
+        function handleClearRequest() {
+            hideModalError();
+            AppState.isPasswordPromptVisible = true;
+            updateModalDisplay();
+        }
+
+        function handlePasswordSubmit() {
+            const password = Elements.adminPassword.value;
+            if (password === "Embrasada2025") {
+                handleClearConfirm();
+            } else {
+                showModalError("Senha incorreta. Tente novamente.");
+                Elements.adminPassword.value = "";
+            }
+        }
+
+        async function handleClearConfirm() {
+            if (!AppState.selectedNumber) return;
+            
+            const updatedNumbers = AppState.numbers.map(n => 
+                n.id === AppState.selectedNumber.id ? 
+                { ...n, status: "available", owner: "", phone: "" } : n
+            );
+            
+            const success = await updateFirestore(updatedNumbers);
+            if (success) {
+                hideModal();
+            } else {
+                showModalError("Ocorreu um erro ao limpar o número. Tente novamente.");
+            }
+        }
+
+        // === GEMINI API ===
+        async function generateTextWithGemini(prompt) {
+            AppState.isGenerating = true;
+            AppState.generatedText = "";
+            
+            Elements.generatedTextModal.classList.remove('hidden');
+            setTimeout(() => {
+                Elements.generatedTextModal.classList.add('show');
+            }, 10);
+            
+            Elements.generationLoading.classList.remove('hidden');
+            Elements.generatedText.classList.add('hidden');
+
+            try {
+                const apiKey = ""; // API key vazia - funcionalidade desabilitada
+                if (!apiKey) {
+                    throw new Error("API key não configurada");
+                }
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const payload = { 
+                    contents: [{ 
+                        role: "user", 
+                        parts: [{ text: prompt }] 
+                    }] 
+                };
+                
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) { 
+                    throw new Error(`API error: ${response.statusText}`); 
+                }
+                
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    AppState.generatedText = result.candidates[0].content.parts[0].text;
+                } else {
+                    AppState.generatedText = "Não foi possível gerar o texto. Tente novamente.";
+                }
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                AppState.generatedText = "Funcionalidade de IA temporariamente indisponível. Entre em contato diretamente com o participante.";
+            } finally {
+                AppState.isGenerating = false;
+                Elements.generationLoading.classList.add('hidden');
+                Elements.generatedText.textContent = AppState.generatedText;
+                Elements.generatedText.classList.remove('hidden');
+            }
+        }
+
+        function handleGenerateReminder() {
+            if (!AppState.selectedNumber) return;
+            
+            AppState.generationTitle = "Lembrete de Pagamento";
+            Elements.generationTitle.textContent = AppState.generationTitle;
+            
+            const participant = AppState.selectedNumber;
+            const prompt = `Crie uma mensagem de lembrete para o WhatsApp, para ${participant.owner}. O texto deve ser curto, direto e amigável. Lembre que o número ${participant.id} da "Rifa Handebol" está reservado e que o pagamento de R$5,00 via Pix (chave: 75982480821) é necessário para garantir a vaga. Use um tom amigável e inclua um emoji de fogo 🔥. Formate a resposta como uma única mensagem de texto, sem usar asteriscos ou qualquer outra formatação especial.`;
+            
+            generateTextWithGemini(prompt);
+        }
+
+        function hideGeneratedTextModal() {
+            Elements.generatedTextModal.classList.remove('show');
+            setTimeout(() => {
+                Elements.generatedTextModal.classList.add('hidden');
+            }, 300);
+        }
+
+        // === INICIALIZAÇÃO ===
+        function setupEventListeners() {
+            // Modal close
+            Elements.closeModal.addEventListener('click', hideModal);
+            Elements.numberModal.addEventListener('click', (e) => {
+                if (e.target === Elements.numberModal) {
+                    hideModal();
+                }
+            });
+
+            // Form buttons
+            Elements.reserveBtn.addEventListener('click', () => handleSave("reserved"));
+            Elements.sellBtn.addEventListener('click', () => handleSave("sold"));
+            Elements.markSoldBtn.addEventListener('click', handleMarkAsSold);
+            Elements.clearNumberBtn.addEventListener('click', handleClearRequest);
+            Elements.clearSoldBtn.addEventListener('click', handleClearRequest);
+            Elements.closeSoldBtn.addEventListener('click', hideModal);
+            Elements.confirmClearBtn.addEventListener('click', handlePasswordSubmit);
+            Elements.cancelClearBtn.addEventListener('click', () => {
+                AppState.isPasswordPromptVisible = false;
+                hideModalError();
+                updateModalDisplay();
+            });
+
+            // Generated text modal
+            Elements.generateReminderBtn.addEventListener('click', handleGenerateReminder);
+            Elements.copyTextBtn.addEventListener('click', () => copyToClipboard(AppState.generatedText));
+            Elements.closeGeneratedTextBtn.addEventListener('click', hideGeneratedTextModal);
+            Elements.generatedTextModal.addEventListener('click', (e) => {
+                if (e.target === Elements.generatedTextModal) {
+                    hideGeneratedTextModal();
+                }
+            });
+
+            // Form inputs
+            Elements.participantName.addEventListener('input', (e) => {
+                AppState.participantName = e.target.value;
+            });
+            Elements.participantPhone.addEventListener('input', (e) => {
+                AppState.participantPhone = e.target.value;
+            });
+            Elements.adminPassword.addEventListener('input', (e) => {
+                AppState.adminPassword = e.target.value;
+            });
+
+            // Enter key handling
+            Elements.adminPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                }
+            });
+        }
+
+        function initializeApp() {
+            console.log("Initializing Rifa Embrasada app");
+            
+            // Set raffle ID
+            AppState.raffleId = getRaffleId();
+            Elements.raffleIdSpan.textContent = AppState.raffleId;
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Setup Firebase auth
+            console.log("Setting up auth listener");
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    console.log("Auth: No user, signing in anonymously");
+                    await auth.signInAnonymously();
+                } else {
+                    console.log("Auth: User signed in", user.uid);
+                }
+                
+                AppState.isAuthReady = true;
+                console.log("Auth: isAuthReady set to true");
+                setupFirestoreListener();
+            });
+        }
+
+        // Start the app when DOM is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+        console.log('Rifa Embrasada - JavaScript carregado');
+    </script>
+</body>
+</html>
+
