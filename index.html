@@ -15,7 +15,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Estilos CSS (iguais ao anterior) */
         .font-bebas { font-family: 'Bebas Neue', sans-serif; }
         .font-roboto { font-family: 'Roboto', sans-serif; }
         .loading-spinner { border: 4px solid #f3f4f6; border-top: 4px solid #f97316; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
@@ -28,8 +27,8 @@
         .number-reserved:hover { background-color: rgb(250 204 21); }
         .number-sold { background-color: rgb(185 28 28); color: rgb(255 255 255); box-shadow: 0 4px 6px -1px rgba(185, 28, 28, 0.5); }
         .number-sold:hover { background-color: rgb(220 38 38); }
-        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; opacity: 0; transition: opacity 0.3s ease-in-out; }
-        .modal-overlay.show { opacity: 1; }
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
         .modal-content { background-color: rgb(31 41 55); border: 1px solid rgb(55 65 81); border-radius: 1rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 24rem; margin: 0 auto; padding: 1.5rem; position: relative; transform: scale(0.95); transition: transform 0.3s ease-in-out; }
         .modal-overlay.show .modal-content { transform: scale(1); }
         .hidden { display: none !important; }
@@ -45,7 +44,7 @@
         </div>
     </div>
     <div id="error-screen" class="hidden text-red-400 text-center p-4 bg-gray-900 min-h-screen">
-         <div class="flex items-center justify-center min-h-screen">
+        <div class="flex items-center justify-center min-h-screen">
             <div class="text-center">
                 <h2 class="text-2xl font-bold mb-4">Erro Crítico</h2>
                 <p id="error-message" class="text-lg"></p>
@@ -53,6 +52,7 @@
             </div>
         </div>
     </div>
+
     <div id="main-app" class="hidden bg-gradient-to-br from-gray-900 via-red-900 to-black min-h-screen font-roboto p-4 sm:p-6 lg:p-8 text-white">
         <div class="max-w-5xl mx-auto">
             <header class="text-center mb-6">
@@ -77,6 +77,7 @@
                     </ul>
                 </div>
             </header>
+
             <div class="mb-6 p-4 bg-gray-900 bg-opacity-60 rounded-xl shadow-lg">
                 <div class="flex flex-wrap justify-center items-center gap-4 sm:gap-8">
                     <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full bg-red-700"></div><span class="text-gray-300">Vendido (<span id="sold-count">0</span>)</span></div>
@@ -84,19 +85,79 @@
                     <div class="flex items-center gap-2"><div class="w-4 h-4 rounded-full bg-gray-700"></div><span class="text-gray-300">Disponível (<span id="available-count">140</span>)</span></div>
                 </div>
             </div>
+
             <main class="numbers-grid p-4 bg-gray-900 bg-opacity-50 rounded-xl shadow-2xl" id="numbers-grid"></main>
+
             <footer class="text-center mt-8 text-gray-500 text-sm">
                 <p><strong class="text-lime-500">Suporte técnico: (75) 9.9176-1914</strong></p>
                 <p><strong class="text-lime-500">©Feito por: @enzo.sprr</strong></p>
             </footer>
         </div>
     </div>
-    <div id="number-modal" class="modal-overlay hidden">
+
+    <div id="number-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-orange-400">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <div class="text-center mb-6">
+                <span id="modal-number-display" class="font-bebas inline-block w-20 h-20 leading-[5rem] text-center text-4xl rounded-full number-available">1</span>
+                <h2 id="modal-number-title" class="font-bebas text-4xl text-orange-400 mt-4">Número 1</h2>
+            </div>
+            <div id="modal-error" class="hidden text-red-400 text-center text-sm mb-4"></div>
+            
+            <div id="available-form" class="space-y-4">
+                <div>
+                    <label for="participant-name" class="block text-sm font-medium text-gray-400 mb-1">Nome do Participante</label>
+                    <input type="text" id="participant-name" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" placeholder="Nome completo (obrigatório)">
+                </div>
+                <div>
+                    <label for="participant-phone" class="block text-sm font-medium text-gray-400 mb-1">Telefone</label>
+                    <input type="text" id="participant-phone" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" placeholder="11 dígitos (DDD + número)">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button id="reserve-btn" class="w-full bg-yellow-500 text-black py-3 rounded-lg font-semibold hover:bg-yellow-400 transition-colors">Reservar</button>
+                    <button id="sell-btn" class="w-full bg-red-700 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors">Marcar como Vendido</button>
+                </div>
+            </div>
+
+            <div id="reserved-info" class="hidden text-center space-y-4">
+                <div class="bg-gray-900 bg-opacity-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-400">Nome:</p><p id="reserved-name" class="font-bold text-lg text-white"></p>
+                    <p class="text-sm text-gray-400 mt-2">Telefone:</p><p id="reserved-phone" class="font-semibold text-gray-200"></p>
+                </div>
+                <div class="flex flex-col gap-3 pt-2">
+                    <button id="mark-sold-btn" class="w-full bg-red-700 text-white py-3 rounded-lg font-semibold hover:bg-red-600">Marcar como Vendido</button>
+                    <button id="clear-number-btn" class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-500">Liberar Número</button>
+                </div>
+            </div>
+
+            <div id="sold-info" class="hidden text-center space-y-4">
+                 <div class="bg-gray-900 bg-opacity-50 p-4 rounded-lg">
+                    <p class="text-sm text-gray-400">Nome:</p><p id="sold-name" class="font-bold text-lg text-white"></p>
+                    <p class="text-sm text-gray-400 mt-2">Telefone:</p><p id="sold-phone" class="font-semibold text-gray-200"></p>
+                </div>
+                <div class="flex flex-col gap-3 pt-2">
+                    <button id="clear-sold-btn" class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-500">Liberar Número</button>
+                    <button id="close-sold-btn" class="w-full bg-gray-700 text-white py-3 rounded-lg font-semibold hover:bg-gray-600">Fechar</button>
+                </div>
+            </div>
+
+            <div id="password-prompt" class="hidden space-y-4">
+                <div>
+                    <label for="admin-password" class="block text-sm font-medium text-gray-400 mb-1">Senha Administrativa</label>
+                    <input type="password" id="admin-password" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Digite a senha para confirmar">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button id="confirm-clear-btn" class="w-full bg-red-700 text-white py-3 rounded-lg font-semibold hover:bg-red-600">Confirmar Liberação</button>
+                    <button id="cancel-clear-btn" class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-500">Cancelar</button>
+                </div>
+            </div>
         </div>
-    <div id="generated-text-modal" class="modal-overlay hidden" style="z-index: 60;">
-        </div>
+    </div>
+
     <script>
-        // === CONFIGURAÇÃO FIREBASE (ESPECÍFICA DESTA RIFA) ===
+        // === CONFIGURAÇÃO FIREBASE (RIFA HANDEBOL) ===
         const firebaseConfig = {
             apiKey: "AIzaSyAaq6Axgk7LGZlO0j_WWLoG6QRUIetj9dk",
             authDomain: "rifa-handebol-embrasada.firebaseapp.com",
@@ -105,55 +166,188 @@
             messagingSenderId: "184640580884",
             appId: "1:184640580884:web:f91ca340d06e46cf82a601"
         };
+
+        // Inicializar Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const db = app.firestore();
         const auth = app.auth();
         const remoteConfig = app.remoteConfig();
 
-        // === ESTADO DA APLICAÇÃO (ESPECÍFICO DESTA RIFA) ===
+        // === ESTADO DA APLICAÇÃO ===
         const AppState = {
-            isAuthReady: false,
             numbers: [],
             selectedNumber: null,
-            isLoading: true,
-            error: "",
             raffleId: "rifa-embrasada-2025-handebol", // ID fixo e oculto
-            // ... (resto do estado é igual ao anterior)
+            isModalOpen: false,
+            isPasswordPromptVisible: false,
         };
 
-        const Elements = { /* ... (igual ao anterior) */ };
-
-        // === FUNÇÕES (A MAIORIA É IGUAL AO ANTERIOR) ===
+        // === ELEMENTOS DO DOM ===
+        const Elements = {
+            loadingScreen: document.getElementById('loading-screen'),
+            errorScreen: document.getElementById('error-screen'),
+            errorMessage: document.getElementById('error-message'),
+            mainApp: document.getElementById('main-app'),
+            numbersGrid: document.getElementById('numbers-grid'),
+            soldCount: document.getElementById('sold-count'),
+            reservedCount: document.getElementById('reserved-count'),
+            availableCount: document.getElementById('available-count'),
+            numberModal: document.getElementById('number-modal'),
+            closeModal: document.getElementById('close-modal'),
+            modalNumberDisplay: document.getElementById('modal-number-display'),
+            modalNumberTitle: document.getElementById('modal-number-title'),
+            modalError: document.getElementById('modal-error'),
+            availableForm: document.getElementById('available-form'),
+            reservedInfo: document.getElementById('reserved-info'),
+            soldInfo: document.getElementById('sold-info'),
+            passwordPrompt: document.getElementById('password-prompt'),
+            participantName: document.getElementById('participant-name'),
+            participantPhone: document.getElementById('participant-phone'),
+            adminPassword: document.getElementById('admin-password'),
+            reserveBtn: document.getElementById('reserve-btn'),
+            sellBtn: document.getElementById('sell-btn'),
+            markSoldBtn: document.getElementById('mark-sold-btn'),
+            clearNumberBtn: document.getElementById('clear-number-btn'),
+            clearSoldBtn: document.getElementById('clear-sold-btn'),
+            closeSoldBtn: document.getElementById('close-sold-btn'),
+            confirmClearBtn: document.getElementById('confirm-clear-btn'),
+            cancelClearBtn: document.getElementById('cancel-clear-btn'),
+            reservedName: document.getElementById('reserved-name'),
+            reservedPhone: document.getElementById('reserved-phone'),
+            soldName: document.getElementById('sold-name'),
+            soldPhone: document.getElementById('sold-phone')
+        };
         
+        // === FUNÇÕES DE UI ===
+        function showError(message) {
+            Elements.errorMessage.textContent = message;
+            Elements.loadingScreen.classList.add('hidden');
+            Elements.mainApp.classList.add('hidden');
+            Elements.errorScreen.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            Elements.loadingScreen.classList.add('hidden');
+            Elements.mainApp.classList.remove('hidden');
+        }
+
+        function getNumberClass(status) {
+            switch (status) {
+                case "sold": return "number-sold";
+                case "reserved": return "number-reserved";
+                default: return "number-available";
+            }
+        }
+        
+        function renderNumbers() {
+            Elements.numbersGrid.innerHTML = '';
+            AppState.numbers.forEach(number => {
+                const button = document.createElement('button');
+                button.className = `font-bebas w-full aspect-square flex items-center justify-center text-xl sm:text-2xl rounded-lg number-btn ${getNumberClass(number.status)}`;
+                button.textContent = number.id;
+                button.addEventListener('click', () => handleNumberClick(number));
+                Elements.numbersGrid.appendChild(button);
+            });
+        }
+
         function updateStats() {
             const stats = AppState.numbers.reduce((acc, number) => {
                 acc[number.status] = (acc[number.status] || 0) + 1;
                 return acc;
             }, { sold: 0, reserved: 0, available: 0 });
             
-            stats.available = 140 - (stats.sold + stats.reserved); // <-- AQUI MUDA PARA 140
+            stats.available = 140 - (stats.sold + stats.reserved);
             
             Elements.soldCount.textContent = stats.sold;
             Elements.reservedCount.textContent = stats.reserved;
             Elements.availableCount.textContent = stats.available;
         }
 
-        function setupFirestoreListener() {
-            if (!AppState.isAuthReady || !AppState.raffleId) return;
+        function showModal() {
+            AppState.isModalOpen = true;
+            Elements.numberModal.classList.add('show');
+        }
+
+        function hideModal() {
+            AppState.isModalOpen = false;
+            Elements.numberModal.classList.remove('show');
+            // Resetar o estado do modal para evitar dados antigos
+            AppState.isPasswordPromptVisible = false;
+            Elements.participantName.value = "";
+            Elements.participantPhone.value = "";
+            Elements.adminPassword.value = "";
+            hideModalError();
+        }
+
+        function showModalError(message) {
+            Elements.modalError.textContent = message;
+            Elements.modalError.classList.remove('hidden');
+        }
+
+        function hideModalError() {
+            Elements.modalError.classList.add('hidden');
+        }
+
+        function updateModalDisplay() {
+            if (!AppState.selectedNumber) return;
             
+            const number = AppState.selectedNumber;
+            Elements.modalNumberDisplay.textContent = number.id;
+            Elements.modalNumberDisplay.className = `font-bebas inline-block w-20 h-20 leading-[5rem] text-center text-4xl rounded-full ${getNumberClass(number.status)}`;
+            Elements.modalNumberTitle.textContent = `Número ${number.id}`;
+            
+            // Esconde todos os painéis por padrão
+            Elements.availableForm.classList.add('hidden');
+            Elements.reservedInfo.classList.add('hidden');
+            Elements.soldInfo.classList.add('hidden');
+            Elements.passwordPrompt.classList.add('hidden');
+            
+            if (AppState.isPasswordPromptVisible) {
+                Elements.passwordPrompt.classList.remove('hidden');
+            } else {
+                switch (number.status) {
+                    case "available":
+                        Elements.availableForm.classList.remove('hidden');
+                        break;
+                    case "reserved":
+                        Elements.reservedName.textContent = number.owner;
+                        Elements.reservedPhone.textContent = number.phone;
+                        Elements.reservedInfo.classList.remove('hidden');
+                        break;
+                    case "sold":
+                        Elements.soldName.textContent = number.owner;
+                        Elements.soldPhone.textContent = number.phone;
+                        Elements.soldInfo.classList.remove('hidden');
+                        break;
+                }
+            }
+        }
+
+        // === FUNÇÕES FIREBASE ===
+        async function updateFirestore(updatedNumbers) {
+            const raffleDocRef = db.collection("rifas").doc(AppState.raffleId);
+            try {
+                await raffleDocRef.set({ numbers: updatedNumbers });
+                return true;
+            } catch (e) {
+                console.error("Error updating document: ", e);
+                showModalError("Erro ao salvar. Verifique a conexão.");
+                return false;
+            }
+        }
+        
+        function setupFirestoreListener() {
             const raffleDocRef = db.collection("rifas").doc(AppState.raffleId);
             
-            AppState.unsubscribeFirestore = raffleDocRef.onSnapshot(docSnap => {
-                // A verificação agora é para 140 números
+            raffleDocRef.onSnapshot(docSnap => {
                 if (docSnap.exists && docSnap.data().numbers && docSnap.data().numbers.length === 140) {
                     AppState.numbers = docSnap.data().numbers;
                     renderNumbers();
                     updateStats();
                     hideLoading();
                 } else {
-                    // **NÃO INICIALIZA MAIS A RIFA**
                     console.error("Documento da rifa não encontrado ou corrompido. ID:", AppState.raffleId);
-                    showError("Os dados da rifa não foram encontrados ou estão corrompidos. A inicialização automática foi desativada para prevenir perda de dados.");
+                    showError("Os dados da rifa não foram encontrados ou estão corrompidos. A inicialização foi desativada para prevenir perda de dados.");
                 }
             }, err => {
                 console.error("Firestore Snapshot Error:", err);
@@ -161,25 +355,109 @@
             });
         }
 
-        // O resto do JavaScript (funções de salvar, limpar, etc.) é idêntico ao da outra rifa
-        // ... (cole aqui o resto do JavaScript do arquivo anterior)
-        
+        // === EVENT HANDLERS (AÇÕES DO USUÁRIO) ===
+        function handleNumberClick(number) {
+            AppState.selectedNumber = number;
+            AppState.isPasswordPromptVisible = false;
+            hideModalError();
+            updateModalDisplay();
+            showModal();
+        }
+
+        async function handleSave(status) {
+            const name = Elements.participantName.value.trim();
+            const phone = Elements.participantPhone.value.trim().replace(/\D/g, "");
+            
+            if (!name || !phone) return showModalError("Por favor, preencha o nome e o telefone.");
+            if (phone.length !== 11) return showModalError("O telefone deve ter 11 dígitos (DDD + número).");
+            if (!AppState.selectedNumber) return;
+
+            const updatedNumbers = AppState.numbers.map(n =>
+                n.id === AppState.selectedNumber.id ? { ...n, status, owner: name, phone: phone } : n
+            );
+            
+            if (await updateFirestore(updatedNumbers)) hideModal();
+        }
+
+        async function handleMarkAsSold() {
+            if (!AppState.selectedNumber) return;
+            const updatedNumbers = AppState.numbers.map(n => n.id === AppState.selectedNumber.id ? { ...n, status: "sold" } : n);
+            if (await updateFirestore(updatedNumbers)) hideModal();
+        }
+
+        function handleClearRequest() {
+            if (localStorage.getItem('isAdminLoggedIn') !== 'true') {
+                return showModalError("Ação restrita. Apenas administradores podem liberar números.");
+            }
+            hideModalError();
+            AppState.isPasswordPromptVisible = true;
+            updateModalDisplay();
+        }
+
+        async function handleClearConfirm() {
+            if (!AppState.selectedNumber) return;
+            const passwordInput = Elements.adminPassword.value;
+            
+            try {
+                await remoteConfig.fetchAndActivate();
+                const adminPassword = remoteConfig.getString('admin_password');
+
+                if (!adminPassword || passwordInput !== adminPassword) {
+                    return showModalError("Senha incorreta.");
+                }
+
+                const updatedNumbers = AppState.numbers.map(n => 
+                    n.id === AppState.selectedNumber.id ? { ...n, status: "available", owner: "", phone: "" } : n
+                );
+                
+                if (await updateFirestore(updatedNumbers)) hideModal();
+
+            } catch (err) {
+                console.error("Erro ao buscar senha do Remote Config:", err);
+                showModalError("Não foi possível validar a senha. Tente novamente.");
+            }
+        }
+
+        // === INICIALIZAÇÃO DA APLICAÇÃO ===
+        function setupEventListeners() {
+            Elements.closeModal.addEventListener('click', hideModal);
+            Elements.numberModal.addEventListener('click', (e) => { if (e.target === Elements.numberModal) hideModal(); });
+            Elements.reserveBtn.addEventListener('click', () => handleSave("reserved"));
+            Elements.sellBtn.addEventListener('click', () => handleSave("sold"));
+            Elements.markSoldBtn.addEventListener('click', handleMarkAsSold);
+            Elements.clearNumberBtn.addEventListener('click', handleClearRequest);
+            Elements.clearSoldBtn.addEventListener('click', handleClearRequest);
+            Elements.closeSoldBtn.addEventListener('click', hideModal);
+            Elements.confirmClearBtn.addEventListener('click', handleClearConfirm);
+            Elements.adminPassword.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleClearConfirm(); });
+            Elements.cancelClearBtn.addEventListener('click', () => {
+                AppState.isPasswordPromptVisible = false;
+                hideModalError();
+                updateModalDisplay();
+            });
+        }
+
         function initializeApp() {
+            console.log("Initializing Rifa Handebol App");
             setupEventListeners();
+            
             auth.onAuthStateChanged(async (user) => {
-                if (!user) await auth.signInAnonymously();
-                AppState.isAuthReady = true;
+                if (!user) {
+                    try {
+                        await auth.signInAnonymously();
+                    } catch (err) {
+                        console.error("Anonymous sign-in failed:", err);
+                        showError("Falha na autenticação. Verifique as configurações do Firebase.");
+                        return;
+                    }
+                }
+                console.log("Auth ready.");
                 setupFirestoreListener();
             });
         }
-        
-        // Cole as demais funções JS aqui (sem alterações)
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeApp);
-        } else {
-            initializeApp();
-        }
+        // Iniciar a aplicação
+        initializeApp();
     </script>
 </body>
 </html>
